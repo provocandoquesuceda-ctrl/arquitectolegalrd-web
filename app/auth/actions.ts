@@ -30,6 +30,9 @@ export async function signUp(formData: FormData) {
   const password = field(formData, "password");
   if (!email || password.length < 10) redirect("/register?error=validation");
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (!siteUrl) redirect("/register?error=config");
+
   let client;
   try {
     client = await createClient();
@@ -37,12 +40,17 @@ export async function signUp(formData: FormData) {
     redirect("/register?error=config");
   }
 
+  let emailRedirectTo: string;
+  try {
+    emailRedirectTo = new URL("/auth/callback?next=/app", siteUrl).toString();
+  } catch {
+    redirect("/register?error=config");
+  }
+
   const { error } = await client.auth.signUp({
     email,
     password,
-    options: {
-      emailRedirectTo: new URL("/auth/callback?next=/app", process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").toString(),
-    },
+    options: { emailRedirectTo },
   });
 
   if (error) redirect("/register?error=signup");
